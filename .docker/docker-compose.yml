@@ -1,0 +1,115 @@
+version: '2'
+
+services:
+  mysql:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_USER: "geocoder"
+      MYSQL_PASSWORD: "geocoder"
+      MYSQL_DATABASE: "geocoder"
+    volumes:
+      - geocoder-mysql-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    container_name: geocoder_mysql
+    networks:
+      beers-net:
+        aliases:
+          - geocoder-mysql
+
+  mongo:
+    image: mongo:latest
+    restart: always
+    volumes:
+      - beers-mongo-data:/data/db
+    ports:
+      - 27017:27017
+    container_name: beers_mongo
+    networks:
+      beers-net:
+        aliases:
+          - beers-mongo
+
+  geocoder_api_php:
+    build:
+      context: geocoder_api_php/
+      dockerfile: Dockerfile
+    restart: always
+    working_dir: /var/www
+    volumes:
+      - ../geocoder_api:/var/www
+    environment:
+      - "DB_PORT=3306"
+      - "DB_HOST=geocoder-mysql"
+    container_name: geocoder_api_php
+    networks:
+      beers-net:
+        aliases:
+          - geocoder-api-php
+
+  beers_api_node:
+    build:
+      context: beers_api_node/
+      dockerfile: Dockerfile
+    restart: always
+    user: "node"
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ../beers_api:/home/node/app
+    expose:
+      - "8080"
+    command: "npm start"
+    container_name: beers_api_node
+    networks:
+      beers-net:
+        aliases:
+          - beers-api-node
+
+  beers_client_node:
+    build:
+      context: beers_client_node/
+      dockerfile: Dockerfile
+    restart: always
+    user: "node"
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ../beers_client:/home/node/app
+    expose:
+      - "8081"
+    command: "npm start"
+    container_name: beers_client_node
+    networks:
+      beers-net:
+        aliases:
+          - beers-client-node
+
+  nginx:
+    build:
+      context: nginx/
+      dockerfile: Dockerfile
+    working_dir: /var/www
+    volumes_from:
+      - geocoder_api_php
+    ports:
+      - 80:80
+    container_name: beers_nginx
+    networks:
+      beers-net:
+        aliases:
+          - beers-nginx
+
+networks:
+  beers-net:
+
+volumes: 
+  geocoder-mysql-data:
+  beers-mongo-data:
+
+  
+

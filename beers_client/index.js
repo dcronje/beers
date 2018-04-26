@@ -1,0 +1,1 @@
+let index = require('./build/server/index')
